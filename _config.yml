@@ -28,7 +28,7 @@ twitter_username: iron_yann
 github_username:  Enelg52
 
 # Build settings
-theme: jekyll-theme-hacker
+theme: jekyll-theme-minimal
 plugins:
   - jekyll-feed
 
