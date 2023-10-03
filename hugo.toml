@@ -1,0 +1,27 @@
+baseURL = 'http://gohugo.io/'
+languageCode = 'en-us'
+theme = "nightfall"
+
+[menu]
+  [[menu.header]]
+    name = "posts"
+    weight = 0
+    url = "posts"
+  [[menu.header]]
+    name = "about"
+    weight = 1
+    url = "about"
+
+[params]
+author = "Enelg's blog"
+user = "enelg"
+hostname = "cul.com"
+
+readingTime = true  # Show reading time on post page
+published = true  # Show published data on post page
+
+[[params.social]]
+key = 0
+name = "Github"
+url = "https://github.com/enelg52"
+icon = "fa-brands fa-github"
